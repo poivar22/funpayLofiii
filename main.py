@@ -11,7 +11,7 @@ from telethon.sessions import SQLiteSession
 from telethon.errors import SessionPasswordNeededError, PasswordHashInvalidError
 import aioschedule
 
-BOT_TOKEN = "8205022632:AAF7grYN3d0tYPQBSCQTFivtS68DAl5rdrg"
+BOT_TOKEN = "8496063485:AAGGJpcjFEyLI8bM4hsA6sYmDHYgzb3kRm8"
 DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1411003346126635082/lgiKWDpfa7L_D83oOEjxyX85VF1yNHKdwnmuEfaBLhDyCDO9fXGlMi_tbCez_cONu_lZ"
 API_ID = 24647488
 API_HASH = "5359d6239969c07a29ea06167484a885"
@@ -47,7 +47,7 @@ photos = [
     "photos/10.png"
 ]
 
-TARGET_CHAT_ID = "8205022632"
+TARGET_CHAT_ID = "8496063485"
 
 index = 0
 

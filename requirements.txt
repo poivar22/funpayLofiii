@@ -1,5 +1,5 @@
 aiogram==2.25.0
 telethon==1.29.0
+aioschedule==0.9.1
 aiohttp==3.8.5
-aioschedule==0.5.2
 requests==2.31.0

